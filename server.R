@@ -13,18 +13,26 @@ library(zoo)
 
 source("helpers.R")
 source("helpers2.R")
-source("helpers3.R")
 
 shinyServer(function(input, output) {
   
   lookBackWindow <- reactive({ input$lookBackWindow })
   
   monitoringVariable <- reactive({
-    getData(input$monitoringVariableName)
+    dat <- getData(ticker = input$monitoringVariableName)
+    if(input$frequency == "Weekly"){
+      dat <- weekly(dat)
+    }
+    return(dat)
   })
   
   tradingAsset <- reactive({
-    getData(input$tradingAssetName)
+    dat <- getData(input$tradingAssetName)
+    
+    if(input$frequency == "Weekly"){
+      dat <- weekly(dat)
+    }
+    return(dat)
   })
   
 
@@ -52,18 +60,18 @@ shinyServer(function(input, output) {
     exitThresholdShortL <- rollapply(monitoringVariable(), width=lookBackWindow(), align="right", quantile, probs=exitThresholdShortNL/100)
     exitThresholdShortU <- rollapply(monitoringVariable(), width=lookBackWindow(), align="right", quantile, probs=exitThresholdShortNU/100)
     
-    merge(monitoringVariable = monitoringVariable(), entryThresholdLong, exitThresholdLongL, exitThresholdLongU, entryThresholdShort, exitThresholdShortL, exitThresholdShortU)
+    merge.zoo(monitoringVariable = monitoringVariable(), tradingAsset = tradingAsset(), entryThresholdLong, exitThresholdLongL, exitThresholdLongU, entryThresholdShort, exitThresholdShortL, exitThresholdShortU)
   })
   
   dat2 <- reactive({
     
     percentrankMV <- runPercentRank(monitoringVariable(), n = lookBackWindow())
-    merge(dat1(), percentrankMV)
+    merge.zoo(dat1(), percentrankMV)
   })
   
   dat3 <- reactive({
-    percentrankTA <- runPercentRank(tradingAsset(), n = lookBackWindow())
-    merge(dat2(), percentrankTA)
+    percentrankTA <- runPercentRank(dat2()$tradingAsset, n = lookBackWindow())
+    merge.zoo(dat2(), percentrankTA)
     })
 
   dat4 <- reactive({   # flag the vix values that are (less than or equal to the 10th percentile) and (greater than or equal to the 90th percentile)
@@ -79,11 +87,15 @@ shinyServer(function(input, output) {
     signalsLong <- signals[cumsum(rle(as.vector(signals$Long))$lengths),"Long"] # remove duplicated signals
     signalsShort <- signals[cumsum(rle(as.vector(signals$Short))$lengths),"Short"] # remove duplicated signals
     signals <- merge(signalsLong, signalsShort)
-    merge(dat3(), signals)
+    if(nrow(signals) != 0){
+    merge.zoo(dat3(), signals)} else {
+      dat3()
+    }
+    
   })
     
   dat5 <- reactive({
-    merge( dat4(), tradingAsset = tradingAsset() )
+    merge.zoo( dat4(), tradingAsset = tradingAsset() )
     
   })
   
@@ -93,7 +105,7 @@ shinyServer(function(input, output) {
     monitoringVariableReturns <- diff( log( monitoringVariable() ) )
     tradingAssetReturns <- diff( log( tradingAsset() ) )
     
-    merge(dat5(), tradingAssetReturns)
+    merge(dat4(), tradingAssetReturns)
     
     
   })
@@ -167,8 +179,9 @@ shinyServer(function(input, output) {
   # show recent data in table format
   output$table2 <- reactive({
     withProgress(message = 'Fetching data, please wait', value = 1, {
-    myTable <-  percentileCalcInput()
-    names(myTable) <- c(input$monitoringVariableName, input$tradingAssetName) 
+     myTable <-  percentileCalcInput()
+    #  myTable <- dat6() # test code
+     names(myTable) <- c(input$monitoringVariableName, input$tradingAssetName) 
     myTable %>%
       knitr::kable("html") %>%
       kable_styling(bootstrap_options = "striped",
@@ -185,7 +198,7 @@ shinyServer(function(input, output) {
   
   output$performancePlotLong <- renderPlot({
      # chart equity curve, daily performance, and drawdowns
-    par(cex.main = 10)
+    par(cex.main = 2)
     charts.PerformanceSummary(returnsLong(), main="Performance (Long trades)")
 
   })
@@ -193,7 +206,7 @@ shinyServer(function(input, output) {
   output$performancePlotShort <- renderPlot({
     
     # chart equity curve, daily performance, and drawdowns
-    par(cex.main = 10)
+    par(cex.main = 2)
     charts.PerformanceSummary(returnsShort(), main="Performance (Short trades)") 
     
 
