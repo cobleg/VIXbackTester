@@ -1,4 +1,3 @@
-
 # This is the server logic for a Shiny web application.
 # You can find out more about building applications with Shiny here:
 #
@@ -35,7 +34,7 @@ shinyServer(function(input, output) {
     return(dat)
   })
   
-
+  
   
   dat1 <- reactive({
     # define parameters
@@ -72,28 +71,28 @@ shinyServer(function(input, output) {
   dat3 <- reactive({
     percentrankTA <- runPercentRank(dat2()$tradingAsset, n = lookBackWindow())
     merge.zoo(dat2(), percentrankTA)
-    })
-
+  })
+  
   dat4 <- reactive({   # flag the vix values that are (less than or equal to the 10th percentile) and (greater than or equal to the 90th percentile)
     signals <- zoo(matrix(nrow=length(dat3()[,"monitoringVariable"]), ncol=2, NA), order.by = index(dat3()))
     signals[,1][dat3()[, "monitoringVariable"] <= dat3()[,"entryThresholdLong"]] <- 1
     signals[,2][dat3()[,"monitoringVariable"] > dat3()[,"entryThresholdShort"]] <- 1
     signals[,1][(dat3()[,"monitoringVariable"] >= dat3()[,"exitThresholdLongL"]) & (dat3()[,"monitoringVariable"] <= dat3()[,"exitThresholdLongU"])] <- -1
     signals[,2][(dat3()[,"monitoringVariable"] >= dat3()[,"exitThresholdShortL"]) & (dat3()[,"monitoringVariable"] <= dat3()[,"exitThresholdShortU"])] <- -1
-
+    
     signals <- na.fill(signals, 0)
     names(signals) <- c('Long', 'Short')
-
+    
     signalsLong <- signals[cumsum(rle(as.vector(signals$Long))$lengths),"Long"] # remove duplicated signals
     signalsShort <- signals[cumsum(rle(as.vector(signals$Short))$lengths),"Short"] # remove duplicated signals
     signals <- merge(signalsLong, signalsShort)
     if(nrow(signals) != 0){
-    merge.zoo(dat3(), signals)} else {
-      dat3()
-    }
+      merge.zoo(dat3(), signals)} else {
+        dat3()
+      }
     
   })
-    
+  
   dat5 <- reactive({
     merge.zoo( dat4(), tradingAsset = tradingAsset() )
     
@@ -137,7 +136,7 @@ shinyServer(function(input, output) {
       knitr::kable("html")  %>%
       kable_styling(bootstrap_options = "striped",
                     full_width = F)
-     # add_header_above(c(" ", "VIX"))
+    # add_header_above(c(" ", "VIX"))
   })
   
   ## Calculate the trade entry and exit values for the trading asset (e.g. VXX)
@@ -146,7 +145,7 @@ shinyServer(function(input, output) {
                                                                                                            input$percentileExitLong/100, 
                                                                                                            input$percentileEntryShort/100,
                                                                                                            input$percentileExitShort/100)) })
- 
+  
   linearMod <- reactive({ 
     lm(tail(tradingAsset, input$lookBackWindow)~tail(monitoringVariable, input$lookBackWindow), data = dat7() )
   })
@@ -157,7 +156,7 @@ shinyServer(function(input, output) {
     for(i in 1:length(tradeEntryValues()  )){
       tradeValues[i] <- tradeEntryValues()[i] * linearMod()$coefficients[2] + linearMod()$coefficients[1]
     }
-    tradeValues <- as.data.frame(tradeValues)
+    tradeValues <- as.data.frame(tradeEntryValues())
     names(tradeValues) <- paste0( "Percentile values (",input$tradingAssetName, ")" )
     row.names(tradeValues) <- c("Entry (Long)", "Exit (Long)", "Entry (Short)", "Exit (Short)")
     tradeValues  %>%
@@ -166,12 +165,12 @@ shinyServer(function(input, output) {
                     full_width = F)
     
   })
-
+  
   
   ## get the most recent data between the last observation (t) back to t-n where n is the Lookback Window parameter
-
+  
   percentileCalcInput <- reactive({
-    df <- data.frame(tail(dat5()$monitoringVariable, input$lookBackWindow), tail(dat5()$tradingAsset, input$lookBackWindow)
+    df <- data.frame(tail(dat5()$monitoringVariable, input$lookBackWindow)
     )
     
   })
@@ -179,13 +178,13 @@ shinyServer(function(input, output) {
   # show recent data in table format
   output$table2 <- reactive({
     withProgress(message = 'Fetching data, please wait', value = 1, {
-     myTable <-  percentileCalcInput()
-    #  myTable <- dat6() # test code
-     names(myTable) <- c(input$monitoringVariableName, input$tradingAssetName) 
-    myTable %>%
-      knitr::kable("html") %>%
-      kable_styling(bootstrap_options = "striped",
-                    full_width = F)
+      myTable <-  percentileCalcInput()
+      #  myTable <- dat6() # test code
+      names(myTable) <- c(input$monitoringVariableName) 
+      myTable %>%
+        knitr::kable("html") %>%
+        kable_styling(bootstrap_options = "striped",
+                      full_width = F)
     })
   })
   
@@ -197,10 +196,10 @@ shinyServer(function(input, output) {
   
   
   output$performancePlotLong <- renderPlot({
-     # chart equity curve, daily performance, and drawdowns
+    # chart equity curve, daily performance, and drawdowns
     par(cex.main = 2)
     charts.PerformanceSummary(returnsLong(), main="Performance (Long trades)")
-
+    
   })
   
   output$performancePlotShort <- renderPlot({
@@ -209,8 +208,8 @@ shinyServer(function(input, output) {
     par(cex.main = 2)
     charts.PerformanceSummary(returnsShort(), main="Performance (Short trades)") 
     
-
+    
   })
   
-
+  
 })

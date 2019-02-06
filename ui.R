@@ -20,20 +20,34 @@ shinyUI(fluidPage(
         "Select time series frequency:",
         c("Daily" = "Daily",
           "Weekly" = "Weekly"),
-        selected = "Weekly"
+        selected = "Daily"
       ),
       selectInput(
         "monitoringVariableName",
         "Ticker (monitoring variable):",
-        c("VIX" = "vix", "ANZ" = "ANZ.AX")
+        c("VIX" = "vix", 
+          "ANZ" = "ANZ.AX",
+          "GBPUSD" = "GBPUSD",
+          "EURUSD" = "EURUSD",
+          "USDCHF" = "USDCHF",
+          "USDCAD" = "USDCAD",
+          "AUDUSD" = "AUDUSD",
+          "USDJPY" = "USDJPY"
+          )
       ),
       selectInput(
         "tradingAssetName",
         "Ticker (tradable asset):",
         c(
-          "VXX" = "vxx",
+          
           "VXXB" = "vxxb",
-          "ANZ" = "ANZ.AX"
+          "ANZ" = "ANZ.AX",
+          "GBPUSD" = "GBPUSD",
+          "EURUSD" = "EURUSD",
+          "USDCHF" = "USDCHF",
+          "USDCAD" = "USDCAD",
+          "AUDUSD" = "AUDUSD",
+          "USDJPY" = "USDJPY"
         )
       ),
       sliderInput(
@@ -165,7 +179,7 @@ shinyUI(fluidPage(
             Enter a short trade if the volatility index is greater than the value shown in the third row of these tables."
           )
           ),
-        column(width = 4, tableOutput("table")),
+       # column(width = 4, tableOutput("table")),
         column(width = 4, tableOutput("table3"))
           ),
       tabPanel(

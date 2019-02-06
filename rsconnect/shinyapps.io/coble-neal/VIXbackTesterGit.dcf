@@ -1,0 +1,12 @@
+name: VIXbackTesterGit
+title: VIXbackTesterGit
+username:
+account: coble-neal
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 669750
+bundleId: 1859289
+url: https://coble-neal.shinyapps.io/VIXbackTesterGit/
+when: 1549452184.79107
+asMultiple: FALSE
+asStatic: FALSE
